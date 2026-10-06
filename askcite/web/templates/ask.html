@@ -2,17 +2,31 @@
 {% block title %}Try a question · Askcite{% endblock %}
 {% block content %}
 <h1>Try a question</h1>
-<p class="muted">The same answers people get in Slack. Database questions run read-only; personal columns are blocked.</p>
+<p class="muted">The same answers people get in Slack, with sources. Database questions run read-only, and personal
+  columns (names, phone, email…) are blocked.</p>
 <form method="post" action="/ask" class="ask-form js-ask">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  <input name="question" value="{{ question }}" placeholder="e.g. What happens when a payment fails?" autofocus>
+  <input name="question" value="{{ question }}" maxlength="{{ demo.max_question_chars if public_demo else 1000 }}"
+         placeholder="e.g. What happens when a payment fails?" autofocus>
   <button class="btn primary">Ask</button>
 </form>
-<p class="small muted js-thinking" hidden>Looking in the docs, code and data… (a local model can take a minute)</p>
+{% if demo.suggested_questions %}
+<div class="suggestions">
+  {% for q in demo.suggested_questions %}
+  <form method="post" action="/ask" class="inline js-ask">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="question" value="{{ q }}">
+    <button class="chip">{{ q }}</button>
+  </form>
+  {% endfor %}
+</div>
+{% endif %}
+<p class="small muted js-thinking" hidden>Looking in the docs, code and data… this can take up to a minute.</p>
+{% if notice %}<div class="flash">{{ notice }}</div>{% endif %}
 {% if answer %}
 <div class="card answer">
   <div class="answer-text">{{ answer.text | answer_html }}</div>
-  {% if answer.how %}<p class="small muted"><em>How I got this:</em> {{ answer.how }}</p>{% endif %}
+  {% if answer.how and (answer.status != "error" or is_admin or not public_demo) %}
+  <p class="small muted"><em>How I got this:</em> {{ answer.how }}</p>{% endif %}
   {% if answer.sources %}
   <h3>Sources</h3>
   <ul class="sources">
@@ -23,12 +37,17 @@
     {% endfor %}
   </ul>
   {% endif %}
+  {% if answer.steps %}
+  <details class="steps" open><summary>How Askcite found this ({{ answer.steps | length }} steps)</summary>
+    <ol>{% for step in answer.steps %}<li>{{ step.detail }}</li>{% endfor %}</ol>
+  </details>
+  {% endif %}
   {% for qid, q in answer.queries.items() %}
-  <details><summary>{{ qid }} · {{ q.status }}{% if q.rows is not none %} · {{ q.rows }} row(s){% endif %}</summary>
+  <details><summary>SQL {{ qid }} · {{ q.status }}{% if q.rows is not none %} · {{ q.rows }} row(s){% endif %}</summary>
     <pre>{{ q.sql }}</pre></details>
   {% endfor %}
   <p class="small muted">Confidence: {{ answer.confidence }} · {{ answer.tool_calls }} tool calls ·
-    {{ (answer.duration_ms / 1000) | round(1) }} s</p>
+    {{ (answer.duration_ms / 1000) | round(1) }} s{% if cached %} · instant (answered before){% endif %}</p>
 </div>
 {% endif %}
 {% endblock %}

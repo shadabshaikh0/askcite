@@ -28,13 +28,19 @@ class LiteLlmModel:
     name: str
     is_local: bool = False
     api_base: str | None = None
-    temperature: float = 0.0
+    # Local models get 0 for steadier tool calls. Cloud models keep the provider's default: newer ones
+    # (e.g. Gemini 3) are tuned for it and can loop or reason worse with a low temperature.
+    temperature: float | None = None
+    num_retries: int = 4  # free tiers answer 429 when busy: retry with backoff instead of failing
 
     def chat(self, messages: list[dict], tools: list[dict] | None = None, tool_choice: Any = None) -> dict:
         import litellm
 
         litellm.drop_params = True  # some providers (e.g. Ollama) reject options like tool_choice
-        kwargs: dict[str, Any] = {"model": self.name, "messages": messages, "temperature": self.temperature}
+        litellm.suppress_debug_info = True
+        kwargs: dict[str, Any] = {"model": self.name, "messages": messages, "num_retries": self.num_retries}
+        if self.temperature is not None:
+            kwargs["temperature"] = self.temperature
         if tools:
             kwargs["tools"] = tools
             if tool_choice is not None:
@@ -54,6 +60,8 @@ class LiteLlmModel:
 
 
 def models_from_settings(ai: AiSettings) -> tuple[ChatModel, ChatModel | None]:
-    cloud = LiteLlmModel(ai.cloud_model, is_local=ai.cloud_model.startswith("ollama"))
-    local = LiteLlmModel(ai.local_model, is_local=True, api_base=ai.local_api_base) if ai.local_model else None
+    cloud_is_local = ai.cloud_model.startswith("ollama")
+    cloud = LiteLlmModel(ai.cloud_model, is_local=cloud_is_local, temperature=0.0 if cloud_is_local else None)
+    local = (LiteLlmModel(ai.local_model, is_local=True, api_base=ai.local_api_base, temperature=0.0)
+             if ai.local_model else None)
     return cloud, local

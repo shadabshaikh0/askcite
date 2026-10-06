@@ -45,3 +45,9 @@ input[readonly] { color: var(--muted); }
 .answer-text { font-size: 16px; } .sources { padding-left: 18px; } pre { background: var(--bg); padding: 10px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
 details { margin-top: 8px; } [hidden] { display: none !important; }
 .icon { display: inline-block; width: 1.6em; }
+.demo-banner { background: var(--accent); color: #fff; text-align: center; font-size: 13px; padding: 6px 12px; }
+.demo-banner a { color: #fff; text-decoration: underline; }
+.suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
+.chip { font: inherit; font-size: 13px; padding: 5px 12px; border-radius: 99px; border: 1px solid var(--line);
+        background: var(--card); color: var(--text); cursor: pointer; } .chip:hover { border-color: var(--accent); }
+.steps ol { margin: 6px 0 0; padding-left: 20px; font-size: 13.5px; color: var(--muted); }

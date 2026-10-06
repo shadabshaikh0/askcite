@@ -55,8 +55,6 @@ def build_app(brain: Brain, access: AccessRules | None = None, token: str | None
         waiting = client.chat_postMessage(channel=channel, thread_ts=thread_ts,
                                           text="🔎 Looking in the docs, code and data…")
         answer = brain.ask(question, Asker(user, groups), channel=channel)
-        if answer.status == "error":
-            log.error("question %s failed: %s", answer.question_id, answer.how)
         if answer.status == "waiting_approval":
             _save_pending(workspace, answer, user, channel, thread_ts)
         client.chat_update(channel=channel, ts=waiting["ts"], text=plain_text(answer)[:3000],

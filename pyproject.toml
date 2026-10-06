@@ -24,6 +24,7 @@ dependencies = [
   "pyyaml>=6.0",
   "slack_bolt>=1.20",
   "sqlglot>=25.0",
+  "tenacity>=8.2",  # litellm needs it for num_retries (retrying free-tier 429s)
   "tree-sitter>=0.23",
   "tree-sitter-language-pack>=0.6",
   "typer>=0.12",

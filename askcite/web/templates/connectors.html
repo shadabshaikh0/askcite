@@ -6,9 +6,11 @@
     <h1>Connectors</h1>
     <p class="muted">Connect where questions come from (Slack) and where answers live (code, docs, database).
       Secrets are stored encrypted. Databases must use a read-only user.</p>
+    {% if not is_admin %}<p class="small muted">You're viewing the demo's connectors (read-only). In your own
+      installation you add and test them here.</p>{% endif %}
   </div>
-  <form method="post" action="/sync"><input type="hidden" name="csrf" value="{{ csrf }}">
-    <button class="btn">↻ Sync all now</button></form>
+  {% if is_admin %}<form method="post" action="/sync"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn">↻ Sync all now</button></form>{% endif %}
 </div>
 {% if saved %}<div class="flash ok">Saved “{{ saved }}”. The first sync has started.</div>{% endif %}
 {% if removed %}<div class="flash">Removed “{{ removed }}” and its indexed data.</div>{% endif %}
@@ -17,7 +19,7 @@
 <section class="group">
   <div class="group-head">
     <h2><span class="icon">{{ group.icon }}</span>{{ group.connector.title }}</h2>
-    {% if group.can_add %}<a class="btn primary" href="/connectors/new/{{ group.kind }}">
+    {% if group.can_add and is_admin %}<a class="btn primary" href="/connectors/new/{{ group.kind }}">
       {{ "+ Add" if group.entries else "Connect" }}</a>{% endif %}
   </div>
   <p class="muted small">{{ group.connector.description }}</p>
@@ -38,7 +40,7 @@
       </div>
       {% if run.status == "failed" and run.error %}<div class="error small">{{ run.error }}</div>{% endif %}
     {% endfor %}
-    {% if item.origin == "connector" %}
+    {% if item.origin == "connector" and is_admin %}
     <div class="actions">
       <a class="btn" href="/connectors/{{ item.id }}/edit">Edit</a>
       <button class="btn js-test-saved" data-id="{{ item.id }}">Test</button>
@@ -47,7 +49,7 @@
         <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn danger">Remove</button></form>
     </div>
     <div class="test-result" id="result-{{ item.id }}"></div>
-    {% elif item.origin != "connector" %}
+    {% elif item.origin != "connector" and is_admin %}
     <div class="small muted">Defined in {{ item.origin }} — edit it there.</div>
     {% endif %}
   </div>

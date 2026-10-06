@@ -82,6 +82,6 @@ def store(test_store_url):
 
     with connect(test_store_url) as conn:
         for table in ("connector", "sync_run", "doc_section", "docs_file_state", "app_setting", "code_chunk",
-                      "sql_example", "repo_state", "schema_snapshot"):
+                      "sql_example", "repo_state", "schema_snapshot", "answer_cache"):
             conn.execute(f"truncate {table} cascade")  # noqa: S608 - fixed table names
         yield conn

@@ -125,6 +125,18 @@ class Limits(BaseModel):
     max_seconds: int = 60
 
 
+class DemoSettings(BaseModel):
+    """Public demo mode (`askcite run --public-demo`): open read-only pages with limits."""
+    suggested_questions: list[str] = Field(default_factory=list)
+    banner: str = "Live demo · all data is made up (a fake shop)"
+    source_url: str | None = None  # e.g. the GitHub repository
+    per_visitor_limit: int = 5  # questions per visitor (IP) per window
+    per_visitor_window_minutes: int = 10
+    daily_limit: int = 150  # questions per day for the whole site (answers from the cache don't count)
+    max_question_chars: int = 300
+    cache_hours: int = 24  # identical questions get the stored answer for this long
+
+
 class SourcesConfig(BaseModel):
     timezone: str = "Asia/Kolkata"
     code: list[CodeSource] = Field(default_factory=list)
@@ -134,6 +146,7 @@ class SourcesConfig(BaseModel):
     slack: SlackSource | None = None
     ai: AiSettings = Field(default_factory=AiSettings)
     limits: Limits = Field(default_factory=Limits)
+    demo: DemoSettings = Field(default_factory=DemoSettings)
 
 
 class Group(BaseModel):
@@ -204,11 +217,14 @@ def get_settings() -> Settings:
     config_dir = Path(os.environ.get("ASKCITE_CONFIG_DIR", "config")).expanduser().resolve()
     load_dotenv(Path(".env"))
     load_dotenv(config_dir / ".env")
+    sources = SourcesConfig.model_validate(_read_yaml(config_dir / "sources.yaml"))
+    if os.environ.get("ASKCITE_MODEL"):  # e.g. a hosted demo switching to gemini/gemini-flash-latest
+        sources.ai.cloud_model = os.environ["ASKCITE_MODEL"]
     return Settings(
         config_dir=config_dir,
         data_dir=Path(os.environ.get("ASKCITE_DATA_DIR", "data")).expanduser().resolve(),
         store_url=os.environ.get("ASKCITE_STORE_URL", "postgresql://askcite:askcite@localhost:5433/askcite"),
-        sources=SourcesConfig.model_validate(_read_yaml(config_dir / "sources.yaml")),
+        sources=sources,
         access=AccessConfig.model_validate(_read_yaml(config_dir / "access.yaml")),
         glossary=Glossary.model_validate(_read_yaml(config_dir / "glossary.yaml")),
     )

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import warnings
 from pathlib import Path
 
 import typer
@@ -368,15 +369,25 @@ app.add_typer(demo_app, name="demo")
 @demo_app.command("setup")
 def demo_setup(example: Path = typer.Option(Path("examples/demo-shop"), help="the demo folder"),
                rows: int = typer.Option(300, help="fake rows per table"),
-               docs_web_url: str = typer.Option(None, help="base URL for doc links, e.g. your GitHub blob URL")):
-    """Set up the demo shop: its own database, a git repo, a FAKE database, connectors, first sync."""
-    from askcite.demo import setup_demo
+               docs_web_url: str = typer.Option(None, help="base URL for doc links, e.g. your GitHub blob URL"),
+               in_place: bool = typer.Option(False, help="use ASKCITE_STORE_URL/ASKCITE_DATA_DIR as they are "
+                                                         "(containers) instead of a separate demo database"),
+               skip_if_ready: bool = typer.Option(False, help="do nothing if the demo is already set up")):
+    """Set up the demo shop: a git repo, a FAKE database, connectors and the first sync."""
+    from askcite.demo import demo_is_ready, setup_demo
 
     if not (example / "app").is_dir():
         raise typer.BadParameter(f"{example} does not look like the demo folder (run from the repo root)")
-    report = setup_demo(example, _settings().store_url, rows=rows, docs_web_url=docs_web_url, echo=typer.echo)
+    settings = _settings()
+    if skip_if_ready and in_place and demo_is_ready(settings.store_url):
+        typer.echo("Demo already set up — nothing to do.")
+        return
+    report = setup_demo(example, settings.store_url, rows=rows, docs_web_url=docs_web_url, echo=typer.echo,
+                        in_place=in_place, data_dir=settings.data_dir if in_place else None)
     for source, state in report["sync"].items():
         typer.echo(f"   {source:<28} {state}")
+    if in_place:
+        return
     config_dir = report["config_dir"]
     typer.echo(f"""
 Done. Fake shop database: {report['tables']} tables, {report['rows']} made-up rows.
@@ -395,9 +406,15 @@ Or ask from the terminal (needs Ollama with `ollama pull qwen2.5:7b`, or another
 @app.command()
 def run(host: str = typer.Option("127.0.0.1", help="web page address (keep 127.0.0.1 unless behind a proxy)"),
         port: int = typer.Option(8080),
-        refresh_minutes: int = typer.Option(10, help="how often to pick up code/Notion/docs/schema changes")):
+        refresh_minutes: int = typer.Option(10, help="how often to pick up code/Notion/docs/schema changes"),
+        public_demo: bool = typer.Option(False, envvar="ASKCITE_PUBLIC_DEMO",
+                                         help="anyone may use /ask and see a read-only /connectors, with limits"),
+        trust_proxy: bool = typer.Option(False, envvar="ASKCITE_TRUST_PROXY",
+                                         help="behind a reverse proxy (Caddy, nginx): use X-Forwarded-For/Proto")):
     """Start everything: the Connectors web page, the Slack bot and background syncing."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.getLogger("LiteLLM").setLevel(logging.WARNING)  # one line per model call is noise
+    warnings.filterwarnings("ignore", message=".*ReadOnly.* qualifier", category=UserWarning)  # litellm import
     import uvicorn
 
     from askcite.slack_bot import SlackManager
@@ -409,12 +426,18 @@ def run(host: str = typer.Option("127.0.0.1", help="web page address (keep 127.0
     runtime.slack = SlackManager(runtime)
     runtime.slack.ensure(runtime.sources.slack)
     threading.Thread(target=runtime.refresh_loop, args=(refresh_minutes,), daemon=True).start()
-    url = f"http://{host}:{port}/connectors"
-    log.info("Askcite is running — open %s (user: admin)", url)
+    if public_demo and runtime.settings.sources.demo.suggested_questions:
+        from askcite.web.app import warm_cache
+
+        threading.Thread(target=warm_cache, args=(runtime, runtime.settings.sources.demo.suggested_questions),
+                         daemon=True).start()
+    url = f"http://{host}:{port}/{'ask' if public_demo else 'connectors'}"
+    log.info("Askcite is running%s — open %s", " (public demo mode)" if public_demo else "", url)
     if generated:
-        log.warning("First start: the web page password is  %s  (change it with `askcite admin-password`)",
-                    generated)
-    uvicorn.run(create_app(runtime), host=host, port=port, log_level="warning")
+        log.warning("First start: the web page password is  %s  (user: admin; change it with "
+                    "`askcite admin-password`)", generated)
+    uvicorn.run(create_app(runtime, public_demo=public_demo), host=host, port=port, log_level="warning",
+                proxy_headers=trust_proxy, forwarded_allow_ips="*" if trust_proxy else None)
 
 
 if __name__ == "__main__":

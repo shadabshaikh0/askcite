@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+- **Public demo mode** (`askcite run --public-demo`):
+  - anyone can try `/ask` and see a read-only Connectors page, while admin pages keep the password;
+  - limits per visitor and per day, one question at a time, and a maximum question length;
+  - suggested questions are pre-answered and cached, so they are instant and use no AI quota.
+- **"How Askcite found this"**: each answer lists the search steps it took, without any data values.
+- Cleaner answers: no "Final answer:" prefixes or source ids in the text.
+- `deploy/demo/`: Docker Compose with Postgres, the app and Caddy (automatic HTTPS). There is a free hosting
+  guide for Oracle Cloud and Gemini.
+- Cloud models get automatic retries on rate limits and use the provider's default temperature.
+- Model errors are logged on the server and never shown to public visitors.
+
 ## v0.1.0
 First public version.
 

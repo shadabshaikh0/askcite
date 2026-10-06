@@ -8,6 +8,7 @@ RUN apt-get update \
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY askcite ./askcite
+COPY examples ./examples
 RUN pip install --no-cache-dir .
 
 RUN useradd --create-home askcite && mkdir -p /data && chown askcite /data

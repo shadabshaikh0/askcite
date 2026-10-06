@@ -16,3 +16,17 @@ limits:
   max_tool_calls: 10
   max_queries: 2
   max_seconds: 240       # local models are slower
+
+demo:   # used by `askcite run --public-demo`
+  banner: "Live demo · all data is made up (a fake shop)"
+  source_url: https://github.com/shadabshaikh0/askcite
+  suggested_questions:
+    - What happens when a payment fails?
+    - Can a customer cancel an order after paying for it?
+    - How many orders are in each status right now?
+    - When is a KYC rejected?
+    - What is the settlement cut-off time?
+    - What is the phone number of the customer who placed order 12?
+  per_visitor_limit: 5
+  per_visitor_window_minutes: 10
+  daily_limit: 150

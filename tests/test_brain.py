@@ -140,3 +140,23 @@ def test_answers_without_any_lookup_are_sent_back_once(settings, catalog):
     answer = Brain(workspace(settings, catalog), model).ask("Minimum order?", Asker("U1", {"everyone"}))
     assert answer.text == "The minimum is ₹1,000." and answer.tool_calls == 1
     assert "you have not looked anything up" in model.sent[1]
+
+
+def test_steps_describe_the_search_without_data_values(settings, catalog):
+    model = ScriptedModel([
+        ("describe_table", {"table": "orders"}),
+        ("run_query", {"sql": "select count(*) from orders", "purpose": "count"}),
+        ("final_answer", {"answer": "{{Q1}} orders.", "sources": ["Q1"], "confidence": "high", "found": True}),
+    ])
+    answer = Brain(workspace(settings, catalog), model).ask("How many orders?", Asker("U1", {"data"}))
+    details = [s["detail"] for s in answer.steps]
+    assert details == ["Read the columns of table orders", "Ran a read-only query on orders — ok"]
+    assert not any(str(SECRET_NUMBER) in d for d in details)
+
+
+def test_answer_text_is_cleaned_of_labels_and_ids():
+    from askcite.brain import clean_answer
+
+    assert clean_answer("Final answer: Retry twice [C4].\n\nSources: C4, Q2") == "Retry twice."
+    assert clean_answer("**Final answer:** {{Q1}} orders (Q1).") == "{{Q1}} orders."
+    assert clean_answer("Orders (CREATED) move to PAID.") == "Orders (CREATED) move to PAID."

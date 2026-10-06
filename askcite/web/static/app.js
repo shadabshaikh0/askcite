@@ -43,7 +43,7 @@ document.querySelectorAll('.js-confirm').forEach(form => form.addEventListener('
 }));
 // "Thinking…" while a question runs
 document.querySelectorAll('.js-ask').forEach(form => form.addEventListener('submit', () => {
-  form.querySelector('button').disabled = true;
+  document.querySelectorAll('.js-ask button').forEach(b => { b.disabled = true; });
   document.querySelector('.js-thinking').hidden = false;
 }));
 // Refresh the connectors page while a sync is running

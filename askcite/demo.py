@@ -36,8 +36,21 @@ def _git_repo_from(source: Path, target: Path) -> None:
         subprocess.run(["git", *args], cwd=target, env=env, check=True, capture_output=True)
 
 
+def demo_is_ready(store_url: str) -> bool:
+    """True when all three demo connectors exist and their last sync succeeded."""
+    try:
+        with psycopg.connect(store_url, connect_timeout=5) as conn:
+            names = {row[0] for row in conn.execute("select name from connector where name = any(%s)",
+                                                     (list(CONNECTORS),))}
+            failed = conn.execute("select count(*) from (select distinct on (source) status from sync_run "
+                                  "order by source, started_at desc) s where status <> 'ok'").fetchone()[0]
+        return names == set(CONNECTORS) and failed == 0
+    except psycopg.Error:
+        return False
+
+
 def setup_demo(example_dir: Path, base_store_url: str, rows: int = 300, docs_web_url: str | None = None,
-               echo=print) -> dict:
+               echo=print, in_place: bool = False, data_dir: Path | None = None) -> dict:
     from askcite import config
     from askcite.connectors.store import delete_connector, get_connector, save_connector
     from askcite.data.fakedb import build_fake_database
@@ -48,21 +61,25 @@ def setup_demo(example_dir: Path, base_store_url: str, rows: int = 300, docs_web
 
     example_dir = example_dir.resolve()
     config_dir = example_dir / "config"
-    data_dir = (example_dir.parent.parent / "data" / "demo").resolve()
-    store_url = _with_database(base_store_url, DEMO_DB)
-
     echo("1/5 Preparing the demo storage database…")
-    with psycopg.connect(base_store_url, autocommit=True) as admin:
-        if not admin.execute("select 1 from pg_database where datname = %s", (DEMO_DB,)).fetchone():
-            admin.execute(pgsql.SQL("create database {}").format(pgsql.Identifier(DEMO_DB)))
-    init_db(store_url)
-    (config_dir / ".env").write_text(
-        "# Written by `askcite demo setup` — keeps the demo separate from your own setup.\n"
-        f"ASKCITE_STORE_URL={store_url}\nASKCITE_DATA_DIR={data_dir}\n")
-    os.environ.update({"ASKCITE_CONFIG_DIR": str(config_dir), "ASKCITE_STORE_URL": store_url,
-                       "ASKCITE_DATA_DIR": str(data_dir)})
-    config.get_settings.cache_clear()
-    settings = config.get_settings()
+    if in_place:  # a container already points ASKCITE_STORE_URL / ASKCITE_DATA_DIR at its own database and volume
+        store_url, data_dir = base_store_url, Path(data_dir or "data").resolve()
+        init_db(store_url)
+        settings = config.get_settings()
+    else:  # a laptop checkout: keep the demo in its own database, remembered in config/.env
+        data_dir = (example_dir.parent.parent / "data" / "demo").resolve()
+        store_url = _with_database(base_store_url, DEMO_DB)
+        with psycopg.connect(base_store_url, autocommit=True) as admin:
+            if not admin.execute("select 1 from pg_database where datname = %s", (DEMO_DB,)).fetchone():
+                admin.execute(pgsql.SQL("create database {}").format(pgsql.Identifier(DEMO_DB)))
+        init_db(store_url)
+        (config_dir / ".env").write_text(
+            "# Written by `askcite demo setup` — keeps the demo separate from your own setup.\n"
+            f"ASKCITE_STORE_URL={store_url}\nASKCITE_DATA_DIR={data_dir}\n")
+        os.environ.update({"ASKCITE_CONFIG_DIR": str(config_dir), "ASKCITE_STORE_URL": store_url,
+                           "ASKCITE_DATA_DIR": str(data_dir)})
+        config.get_settings.cache_clear()
+        settings = config.get_settings()
 
     echo("2/5 Turning examples/demo-shop/app into a git repository…")
     repo_dir = data_dir / "demo-shop-app"

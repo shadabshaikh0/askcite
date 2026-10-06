@@ -67,6 +67,13 @@ Then go to **Try a question**:
 - *How many orders are in each status right now?* (writes SQL and runs it on the fake database)
 - *What is the phone number of the customer who placed order 12?* (refused: personal data)
 
+### Host a public demo for free
+
+`deploy/demo/` runs the fake shop as a **public, read-only demo** with HTTPS. Visitors can ask questions, with
+limits per visitor and per day, and suggested questions are answered instantly from a cache. Admin pages stay
+behind a password. It fits in an Oracle Cloud *Always Free* VM with Gemini's free tier, so it costs $0. See
+**[docs/hosting-oracle.md](docs/hosting-oracle.md)**.
+
 ## How it works
 
 ```mermaid

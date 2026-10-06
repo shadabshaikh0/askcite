@@ -65,21 +65,36 @@ def _summary(key: str, stats: dict) -> str:
     return ""
 
 
-def create_app(runtime) -> FastAPI:
+def create_app(runtime, public_demo: bool = False) -> FastAPI:
+    """public_demo: visitors may use /ask and see a read-only /connectors without a password, with limits."""
+    from askcite.web.cache import cached_answer, store_answer
+    from askcite.web.limits import QuestionLimiter
+
     app = FastAPI(title="Askcite", docs_url=None, redoc_url=None, openapi_url=None)
     app.mount("/static", StaticFiles(directory=_HERE / "static"), name="static")
     templates = Jinja2Templates(directory=_HERE / "templates")
     templates.env.filters["ago"] = _ago
     templates.env.filters["answer_html"] = _answer_html
-    security = HTTPBasic(realm="Askcite")
+    security = HTTPBasic(realm="Askcite", auto_error=False)
     checker = PasswordChecker(runtime.store)
     token = csrf_token(runtime.box.derive(b"csrf"))
+    demo = runtime.settings.sources.demo
+    limiter = QuestionLimiter(demo.per_visitor_limit, demo.per_visitor_window_minutes, demo.daily_limit)
 
-    def admin(credentials: HTTPBasicCredentials = Depends(security)) -> str:
-        if not checker.check(credentials.username, credentials.password):
+    def _valid(credentials: HTTPBasicCredentials | None) -> bool:
+        return credentials is not None and checker.check(credentials.username, credentials.password)
+
+    def admin(credentials: HTTPBasicCredentials | None = Depends(security)) -> bool:
+        if not _valid(credentials):
             raise HTTPException(401, "Wrong user name or password",
                                 headers={"WWW-Authenticate": 'Basic realm="Askcite"'})
-        return credentials.username
+        return True
+
+    def viewer(credentials: HTTPBasicCredentials | None = Depends(security)) -> bool:
+        """True for the admin. In the public demo, visitors get in too (as False)."""
+        if public_demo:
+            return _valid(credentials)
+        return admin(credentials)
 
     async def check_post(request: Request) -> dict:
         origin = request.headers.get("origin")
@@ -92,19 +107,25 @@ def create_app(runtime) -> FastAPI:
         return form
 
     def page(request: Request, template: str, **context) -> HTMLResponse:
-        return templates.TemplateResponse(request, template, {"csrf": token, **context})
+        base = {"csrf": token, "public_demo": public_demo, "demo": demo, "is_admin": True}
+        return templates.TemplateResponse(request, template, {**base, **context})
 
     @app.get("/healthz")
     def healthz():
         return {"ok": True}
 
-    @app.get("/", dependencies=[Depends(admin)])
-    def home():
+    @app.get("/")
+    def home(is_admin: bool = Depends(viewer)):
+        return RedirectResponse("/ask" if public_demo and not is_admin else "/connectors", status_code=303)
+
+    @app.get("/login", dependencies=[Depends(admin)])
+    def login():
+        """Asking for the password here makes the browser send it on every page of the site."""
         return RedirectResponse("/connectors", status_code=303)
 
-    @app.get("/connectors", response_class=HTMLResponse, dependencies=[Depends(admin)])
+    @app.get("/connectors", response_class=HTMLResponse)
     def connectors_page(request: Request, saved: str | None = None, removed: str | None = None,
-                        syncing: int = 0):
+                        syncing: int = 0, is_admin: bool = Depends(viewer)):
         syncs = latest_syncs(runtime.store)
         records = list_connectors(runtime.store)
         yaml_sources = runtime.settings.sources
@@ -151,7 +172,7 @@ def create_app(runtime) -> FastAPI:
             groups.append({"kind": kind, "icon": _ICONS[kind], "connector": connector, "entries": items,
                            "can_add": can_add})
         return page(request, "connectors.html", groups=groups, saved=saved, removed=removed,
-                    running=running or bool(syncing))
+                    running=running or bool(syncing), is_admin=is_admin)
 
     def _form_context(kind: str, record=None, values=None, error=None, result=None):
         connector = REGISTRY.get(kind)
@@ -252,16 +273,70 @@ def create_app(runtime) -> FastAPI:
         runtime.request_sync()
         return RedirectResponse("/connectors?syncing=1", status_code=303)
 
-    @app.get("/ask", response_class=HTMLResponse, dependencies=[Depends(admin)])
-    def ask_page(request: Request):
-        return page(request, "ask.html", question="", answer=None)
+    @app.get("/ask", response_class=HTMLResponse)
+    def ask_page(request: Request, is_admin: bool = Depends(viewer)):
+        return page(request, "ask.html", question="", answer=None, is_admin=is_admin)
 
-    @app.post("/ask", response_class=HTMLResponse, dependencies=[Depends(admin)])
-    def ask(request: Request, form: dict = Depends(check_post)):
-        from askcite.tools import Asker
-
+    @app.post("/ask", response_class=HTMLResponse)
+    def ask(request: Request, form: dict = Depends(check_post), is_admin: bool = Depends(viewer)):
         question = str(form.get("question") or "").strip()
-        answer = runtime.brain.ask(question, Asker("web-admin", {"everyone", "data"})) if question else None
-        return page(request, "ask.html", question=question, answer=answer)
+        context = {"question": question, "answer": None, "notice": None, "cached": False, "is_admin": is_admin}
+        if not question:
+            return page(request, "ask.html", **context)
+        if not public_demo:
+            from askcite.tools import Asker
+
+            context["answer"] = runtime.brain.ask(question, Asker("web-admin", {"everyone", "data"}))
+            return page(request, "ask.html", **context)
+        if len(question) > demo.max_question_chars:
+            context["notice"] = f"Please keep questions under {demo.max_question_chars} characters."
+            return page(request, "ask.html", **context)
+        answer = cached_answer(runtime.store, question, demo.cache_hours)
+        if answer is not None:
+            context.update(answer=answer, cached=True)
+            return page(request, "ask.html", **context)
+        visitor = request.client.host if request.client else "unknown"
+        refusal = None if is_admin else limiter.refusal(visitor)
+        if refusal:
+            context["notice"] = refusal
+            return page(request, "ask.html", **context)
+        if not limiter.try_start():
+            context["notice"] = ("Askcite is answering someone else's question right now (the demo runs on a free AI "
+                                 "plan, one question at a time). Please try again in a minute.")
+            return page(request, "ask.html", **context)
+        try:
+            limiter.record(visitor)
+            context["answer"] = answer_public_question(runtime, question)
+        finally:
+            limiter.finish()
+        store_answer(runtime.store, question, context["answer"])
+        return page(request, "ask.html", **context)
+
+    app.state.limiter = limiter
 
     return app
+
+
+def answer_public_question(runtime, question: str):
+    """Visitors of the public demo may ask about the (fake) data too."""
+    from askcite.tools import Asker
+
+    return runtime.brain.ask(question, Asker("demo-visitor", {"everyone", "data"}))
+
+
+def warm_cache(runtime, questions: list[str], pause_seconds: int = 30, sleep=None) -> int:
+    """Answer the suggested questions once in the background, so visitors get them instantly."""
+    import time
+
+    from askcite.web.cache import cached_answer, store_answer
+
+    sleep = sleep or time.sleep
+    warmed = 0
+    for question in questions:
+        if cached_answer(runtime.store, question, runtime.settings.sources.demo.cache_hours) is not None:
+            continue
+        answer = answer_public_question(runtime, question)
+        store_answer(runtime.store, question, answer)
+        warmed += answer.status == "answered"
+        sleep(pause_seconds)  # stay well under free-tier request limits
+    return warmed

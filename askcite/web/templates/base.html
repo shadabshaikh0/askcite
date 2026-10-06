@@ -8,11 +8,15 @@
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
+  {% if public_demo %}
+  <div class="demo-banner">{{ demo.banner }}{% if demo.source_url %} · <a href="{{ demo.source_url }}" target="_blank" rel="noopener">source code</a>{% endif %}</div>
+  {% endif %}
   <header class="topbar">
     <a class="brand" href="/connectors"><span class="logo">✳</span> Askcite</a>
     <nav>
       <a href="/connectors" class="{{ 'active' if request.url.path.startswith('/connectors') }}">Connectors</a>
       <a href="/ask" class="{{ 'active' if request.url.path.startswith('/ask') }}">Try a question</a>
+      {% if public_demo and not is_admin %}<a href="/login" class="muted small">Admin</a>{% endif %}
     </nav>
   </header>
   <main>{% block content %}{% endblock %}</main>

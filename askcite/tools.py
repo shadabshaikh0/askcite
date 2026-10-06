@@ -107,6 +107,7 @@ class Session:
     code_refs: dict[str, int] = field(default_factory=dict)
     tool_calls: int = 0
     queries_run: int = 0
+    steps: list[dict] = field(default_factory=list)  # "how Askcite found this" (never data values)
     _counters: dict[str, int] = field(default_factory=dict)
 
     def new_id(self, prefix: str) -> str:
@@ -350,6 +351,34 @@ def call_tool(session: Session, name: str, arguments: str) -> str:
     if handler is None:
         return json.dumps({"error": f"unknown tool {name}"})
     try:
-        return json.dumps(handler(), default=str)
+        result = handler()
     except Exception as error:  # noqa: BLE001 - a tool failure is reported to the AI, not raised
-        return json.dumps({"error": f"{name} failed: {str(error).splitlines()[0][:200]}"})
+        result = {"error": f"{name} failed: {str(error).splitlines()[0][:200]}"}
+    session.steps.append(describe_step(session, name, args, result))
+    return json.dumps(result, default=str)
+
+
+def describe_step(session: Session, name: str, args: dict, result: dict) -> dict:
+    """A one-line, human-readable record of a tool call. Never includes data values."""
+    found = len(result.get("results") or []) if isinstance(result, dict) else 0
+    if name in ("search_docs", "search_code", "find_tables"):
+        what = {"search_docs": "Searched the docs", "search_code": "Searched the code",
+                "find_tables": "Looked for tables"}[name]
+        detail = f"{what} for “{str(args.get('query', ''))[:80]}” — {found} found"
+    elif name == "read_code":
+        source = session.sources.get(str(args.get("id", "")))
+        detail = f"Read {source.title}" if source else "Read code"
+    elif name == "describe_table":
+        detail = f"Read the columns of table {str(args.get('table', ''))[:60]}"
+    elif name == "sql_examples":
+        detail = f"Looked at how the code queries {', '.join(map(str, args.get('tables') or []))[:80]} — {found} found"
+    elif name == "run_query":
+        status = result.get("status") if isinstance(result, dict) else "?"
+        tables = ", ".join(session.queries.get(result.get("id"), {}).get("tables", [])) if isinstance(
+            result, dict) and result.get("id") else ""
+        detail = f"Ran a read-only query{(' on ' + tables) if tables else ''} — {status}"
+    else:
+        detail = name
+    if isinstance(result, dict) and result.get("error"):
+        detail += " (error)"
+    return {"tool": name, "detail": detail}
