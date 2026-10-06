@@ -1,0 +1,6 @@
+# Demo: everyone may ask everything (the database is fake).
+allow_dms: true
+groups:
+  everyone: {all_users: true}
+  data: {all_users: true}
+  approvers: {all_users: true}

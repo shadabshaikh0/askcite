@@ -1,0 +1,46 @@
+# Askcite: `docker compose up -d` starts everything.
+#   postgres : Askcite's own storage (index, connectors, logs). Also hosts the FAKE test databases.
+#   app      : the Connectors web page (http://127.0.0.1:8080), the Slack bot and background sync
+#   ollama   : optional local AI model (profile "local-ai")
+name: askcite
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: askcite
+      POSTGRES_USER: askcite
+      POSTGRES_PASSWORD: ${ASKCITE_DB_PASSWORD:-askcite}
+    ports: ["127.0.0.1:5433:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U askcite"]
+      interval: 5s
+      retries: 20
+
+  app:
+    build: .
+    command: ["askcite", "run", "--host", "0.0.0.0"]   # inside the container; published on 127.0.0.1 only
+    env_file: [.env]
+    environment:
+      ASKCITE_STORE_URL: postgresql://askcite:${ASKCITE_DB_PASSWORD:-askcite}@postgres:5432/askcite
+      ASKCITE_CONFIG_DIR: /config
+      ASKCITE_DATA_DIR: /data
+    volumes:
+      - ${ASKCITE_CONFIG_PATH:-./config}:/config:ro
+      - appdata:/data
+      - ${GIT_SSH_KEY_FILE:-/dev/null}:/secrets/git_ssh_key:ro
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama
+    volumes: [ollama:/root/.ollama]
+    profiles: [local-ai]
+
+volumes:
+  pgdata: {}
+  appdata: {}
+  ollama: {}

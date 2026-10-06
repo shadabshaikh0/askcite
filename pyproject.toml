@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "askcite"
+version = "0.1.0"
+description = "Ask questions about your product in Slack; answers come from code, Notion docs and a live read-only database."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = [
+  "cryptography>=42",
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "httpx>=0.27",
+  "jinja2>=3.1",
+  "litellm>=1.50",
+  "pgvector>=0.3",
+  "psycopg[binary]>=3.2",
+  "psycopg-pool>=3.2",
+  "pydantic>=2.6",
+  "python-multipart>=0.0.9",
+  "pyyaml>=6.0",
+  "slack_bolt>=1.20",
+  "sqlglot>=25.0",
+  "tree-sitter>=0.23",
+  "tree-sitter-language-pack>=0.6",
+  "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+askcite = "askcite.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["askcite"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: needs the local Postgres from docker compose"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["examples"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008"]  # FastAPI's Depends() in argument defaults is the intended pattern

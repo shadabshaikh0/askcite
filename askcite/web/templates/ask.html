@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Try a question · Askcite{% endblock %}
+{% block content %}
+<h1>Try a question</h1>
+<p class="muted">The same answers people get in Slack. Database questions run read-only; personal columns are blocked.</p>
+<form method="post" action="/ask" class="ask-form js-ask">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input name="question" value="{{ question }}" placeholder="e.g. What happens when a payment fails?" autofocus>
+  <button class="btn primary">Ask</button>
+</form>
+<p class="small muted js-thinking" hidden>Looking in the docs, code and data… (a local model can take a minute)</p>
+{% if answer %}
+<div class="card answer">
+  <div class="answer-text">{{ answer.text | answer_html }}</div>
+  {% if answer.how %}<p class="small muted"><em>How I got this:</em> {{ answer.how }}</p>{% endif %}
+  {% if answer.sources %}
+  <h3>Sources</h3>
+  <ul class="sources">
+    {% for s in answer.sources %}
+    <li><span class="badge">{{ s.id }}</span>
+      {% if s.url %}<a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.title }}</a>{% else %}{{ s.title }}{% endif %}
+      {% if s.detail %}<span class="muted small"> — {{ s.detail }}</span>{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% for qid, q in answer.queries.items() %}
+  <details><summary>{{ qid }} · {{ q.status }}{% if q.rows is not none %} · {{ q.rows }} row(s){% endif %}</summary>
+    <pre>{{ q.sql }}</pre></details>
+  {% endfor %}
+  <p class="small muted">Confidence: {{ answer.confidence }} · {{ answer.tool_calls }} tool calls ·
+    {{ (answer.duration_ms / 1000) | round(1) }} s</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,11 @@
+# Who may ask what. Slack user ids look like U0123ABCD, user groups like S0123ABCD.
+allowed_channels: []      # empty = any channel the bot is invited to
+allow_dms: true
+groups:
+  everyone:
+    all_users: true       # docs + code questions
+  data:                   # may also ask database questions
+    slack_usergroups: []
+    slack_users: []
+  approvers:              # may click "Run it" on queries touching approval_tables
+    slack_users: []

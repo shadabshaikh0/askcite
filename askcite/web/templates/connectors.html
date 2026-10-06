@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Connectors · Askcite{% endblock %}
+{% block content %}
+<div class="page-head" data-running="{{ 1 if running else 0 }}">
+  <div>
+    <h1>Connectors</h1>
+    <p class="muted">Connect where questions come from (Slack) and where answers live (code, docs, database).
+      Secrets are stored encrypted. Databases must use a read-only user.</p>
+  </div>
+  <form method="post" action="/sync"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn">↻ Sync all now</button></form>
+</div>
+{% if saved %}<div class="flash ok">Saved “{{ saved }}”. The first sync has started.</div>{% endif %}
+{% if removed %}<div class="flash">Removed “{{ removed }}” and its indexed data.</div>{% endif %}
+
+{% for group in groups %}
+<section class="group">
+  <div class="group-head">
+    <h2><span class="icon">{{ group.icon }}</span>{{ group.connector.title }}</h2>
+    {% if group.can_add %}<a class="btn primary" href="/connectors/new/{{ group.kind }}">
+      {{ "+ Add" if group.entries else "Connect" }}</a>{% endif %}
+  </div>
+  <p class="muted small">{{ group.connector.description }}</p>
+  {% if not group.entries %}<div class="card empty">Not connected</div>{% endif %}
+  {% for item in group.entries %}
+  <div class="card">
+    <div class="card-row">
+      <div>
+        <strong>{{ item.name }}</strong>
+        <span class="badge">{{ item.origin }}</span>
+      </div>
+      <span class="pill {{ item.state }}">{{ item.state_text }}</span>
+    </div>
+    {% for run in item.runs %}
+      <div class="small muted">
+        {% if run.last_ok %}Last synced {{ run.last_ok.finished_at | ago }}{% if run.summary %} · {{ run.summary }}{% endif %}
+        {% else %}Not synced yet{% endif %}
+      </div>
+      {% if run.status == "failed" and run.error %}<div class="error small">{{ run.error }}</div>{% endif %}
+    {% endfor %}
+    {% if item.origin == "connector" %}
+    <div class="actions">
+      <a class="btn" href="/connectors/{{ item.id }}/edit">Edit</a>
+      <button class="btn js-test-saved" data-id="{{ item.id }}">Test</button>
+      <form method="post" action="/connectors/{{ item.id }}/delete" class="inline js-confirm"
+            data-confirm="Remove {{ item.name }} and everything indexed from it?">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn danger">Remove</button></form>
+    </div>
+    <div class="test-result" id="result-{{ item.id }}"></div>
+    {% elif item.origin != "connector" %}
+    <div class="small muted">Defined in {{ item.origin }} — edit it there.</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% endfor %}
+{% endblock %}

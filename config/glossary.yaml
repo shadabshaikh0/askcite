@@ -1,0 +1,9 @@
+# Plain-English meaning of tables, columns and business words. This is the single
+# biggest help for correct answers. `askcite glossary-draft` writes a starting point.
+tables:
+  orders:
+    description: one row per customer order
+    columns:
+      status: CREATED -> PAID -> SETTLED; CANCELLED if the user cancels before settlement
+terms:
+  settled: the order is complete and the money has reached us

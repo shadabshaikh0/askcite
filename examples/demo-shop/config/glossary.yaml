@@ -1,0 +1,17 @@
+tables:
+  orders:
+    description: one row per customer order for a bond or FD
+    columns:
+      status: CREATED (not paid) → PAID → SETTLED; or CANCELLED / FAILED
+      paid_at: when the payment succeeded (UTC)
+      settled_at: when the order was settled (UTC)
+      amount: order value in rupees
+  payments: one row per payment attempt (an order can have up to 3)
+  refunds: money returned to customers, because an order was cancelled or a failed payment was debited
+  settlements: one row per settled order (T+1 settlement)
+  kyc_status: the KYC decision for each user
+  products: bonds and fixed deposits customers can invest in
+terms:
+  settled: the units were delivered to the customer; the order can no longer be cancelled
+  T+1: settlement on the next business day after payment
+  cut-off: 3 pm IST; payments after it settle one business day later

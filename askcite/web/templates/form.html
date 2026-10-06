@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ connector.title }} · Askcite{% endblock %}
+{% block content %}
+<a class="back" href="/connectors">← Connectors</a>
+<h1>{{ icon }} {{ "Edit" if record else "Connect" }} {{ connector.title }}</h1>
+<p class="muted">{{ connector.description }}</p>
+{% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+<form method="post" action="/connectors/save" class="form" id="connector-form" autocomplete="off">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="kind" value="{{ kind }}">
+  {% if record %}<input type="hidden" name="id" value="{{ record.id }}">{% endif %}
+  <label class="field">
+    <span>Name</span>
+    <input name="_name" value="{{ name }}" placeholder="worked out automatically if empty"
+           {% if record %}readonly{% endif %}>
+    <small>Shown in answers and links{% if connector.multiple %}; one per {{ connector.title | lower }}{% endif %}.</small>
+  </label>
+  {% for item in fields %}{% set f = item.field %}
+  <label class="field {{ 'checkbox' if f.kind == 'checkbox' }}"
+         {% if f.show_if %}data-show-if="{{ f.show_if[0] }}={{ f.show_if[1] }}"{% endif %}>
+    {% if f.kind == "checkbox" %}
+      <input type="checkbox" name="{{ f.name }}" value="on" {% if item.value %}checked{% endif %}>
+      <span>{{ f.label }}</span>
+    {% else %}
+      <span>{{ f.label }}{% if f.required %} *{% endif %}</span>
+      {% if f.kind == "select" %}
+        <select name="{{ f.name }}">
+          {% for value, label in f.options %}
+            <option value="{{ value }}" {% if item.value == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      {% elif f.kind == "textarea" %}
+        <textarea name="{{ f.name }}" rows="5"
+                  placeholder="{{ '•••• saved — leave empty to keep' if item.saved else f.placeholder }}">{{ item.value }}</textarea>
+      {% else %}
+        <input name="{{ f.name }}" type="{{ 'password' if f.secret else ('number' if f.kind == 'number' else 'text') }}"
+               value="{{ item.value }}"
+               placeholder="{{ '•••• saved — leave empty to keep' if item.saved else f.placeholder }}">
+      {% endif %}
+    {% endif %}
+    {% if f.help %}<small>{{ f.help }}</small>{% endif %}
+  </label>
+  {% endfor %}
+  <div class="test-result" id="test-result">
+    {% if result %}{% include "_result.html" %}{% endif %}
+  </div>
+  {% if error and result and not result.blocked %}
+  <label class="field checkbox"><input type="checkbox" name="save_anyway" value="on"><span>Save anyway</span></label>
+  {% endif %}
+  <div class="actions">
+    <button type="button" class="btn js-test-form">Test connection</button>
+    <button class="btn primary">Save &amp; sync</button>
+  </div>
+</form>
+{% endblock %}

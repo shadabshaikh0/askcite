@@ -1,0 +1,5 @@
+<div class="result {{ 'ok' if result.ok else 'bad' }}">
+  <strong>{{ "✓" if result.ok else "✗" }} {{ result.message }}</strong>
+  {% for line in result.details %}<div class="small">{{ line }}</div>{% endfor %}
+  {% for line in result.warnings %}<div class="small warn">⚠ {{ line }}</div>{% endfor %}
+</div>

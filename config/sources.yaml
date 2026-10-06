@@ -1,0 +1,44 @@
+# Askcite settings. Most people add sources on the Connectors page (askcite run → /connectors)
+# or with `askcite connect …`. Sources can ALSO be defined here (handy for infrastructure-as-code);
+# they then appear on the Connectors page as read-only. Point ASKCITE_CONFIG_DIR at this folder.
+
+timezone: Asia/Kolkata          # "yesterday" means yesterday in this time zone
+
+ai:
+  cloud_model: ollama_chat/qwen2.5:7b      # free + local. Or any LiteLLM model: anthropic/claude-sonnet-5, openai/gpt-5…
+  local_model: null                        # optional second, local model, e.g. ollama_chat/qwen2.5:14b
+  local_api_base: null                     # e.g. http://ollama:11434 when running in Docker
+  policy:                                  # which model may read what: cloud | local | none
+    docs: cloud
+    code: cloud
+    schema: cloud                          # table and column names only
+    data_values: none                      # local | none, never cloud. With `none` Askcite fills the numbers in itself.
+
+limits:
+  max_tool_calls: 8
+  max_queries: 2
+  max_seconds: 60                          # raise for slow local models (e.g. 240)
+
+# ---- Optional: static sources (or use the Connectors page) --------------------------------
+#
+# code:
+#   - name: my-backend
+#     url: git@gitlab.com:my-group/my-backend.git     # any git host; or https://… or file:///path
+#     ssh_key_file: /secrets/git_ssh_key              # read-only deploy key; or token_env: GITLAB_TOKEN
+#     include: ["src/main/**/*.kt", "src/main/**/*.java"]
+#
+# docs_folders:
+#   - name: docs
+#     path: /srv/docs                                  # relative paths start from this folder
+#     web_url: https://github.com/my-org/my-repo/blob/main/docs
+#
+# notion:
+#   token_env: NOTION_TOKEN
+#
+# database:
+#   name: product-db
+#   url_env: READONLY_DB_URL                           # a READ-ONLY user, ideally on a replica
+#   schema_from: auto                                  # auto | live | file
+#   approval_tables: []                                # queries on these wait for an approver in Slack
+#   blocked_tables: []
+#   extra_sensitive_columns: []                        # e.g. users.nickname

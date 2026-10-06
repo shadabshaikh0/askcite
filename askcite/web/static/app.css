@@ -1,0 +1,47 @@
+:root { --bg: #f7f7f5; --card: #fff; --text: #1d1d1b; --muted: #6b6b66; --line: #e4e4df; --accent: #3b5bdb;
+        --ok: #2b8a3e; --ok-bg: #ebfbee; --bad: #c92a2a; --bad-bg: #fff5f5; --run: #e67700; --run-bg: #fff9db; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #161615; --card: #1f1f1d; --text: #ececea; --muted: #a3a39d; --line: #33332f; --accent: #748ffc;
+          --ok-bg: #12301b; --bad-bg: #3a1515; --run-bg: #3a2f0c; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+a { color: var(--accent); text-decoration: none; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px;
+          border-bottom: 1px solid var(--line); background: var(--card); }
+.brand { font-weight: 700; color: var(--text); font-size: 17px; } .logo { color: var(--accent); }
+nav a { margin-left: 18px; color: var(--muted); } nav a.active { color: var(--text); font-weight: 600; }
+main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { margin: 0 0 4px; font-size: 26px; } h2 { margin: 0; font-size: 18px; } h3 { font-size: 15px; margin: 16px 0 6px; }
+.muted { color: var(--muted); } .small { font-size: 13px; }
+.page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 8px; }
+.group { margin-top: 28px; } .group-head { display: flex; justify-content: space-between; align-items: center; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-top: 10px; }
+.card.empty { color: var(--muted); border-style: dashed; }
+.card-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.badge { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 1px 8px; margin-left: 6px; }
+.pill { font-size: 12px; border-radius: 99px; padding: 2px 10px; white-space: nowrap; }
+.pill.ok { color: var(--ok); background: var(--ok-bg); } .pill.failed { color: var(--bad); background: var(--bad-bg); }
+.pill.running { color: var(--run); background: var(--run-bg); } .pill.idle { color: var(--muted); border: 1px solid var(--line); }
+.actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; } form.inline { display: inline; }
+.btn { white-space: nowrap; font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--line);
+       background: var(--card); color: var(--text); cursor: pointer; display: inline-block; }
+.btn:hover { border-color: var(--muted); } .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.danger { color: var(--bad); } .btn:disabled { opacity: .6; cursor: wait; }
+.flash { padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); margin: 12px 0; }
+.flash.ok { border-color: var(--ok); } .flash.error, .error { color: var(--bad); }
+.form { margin-top: 18px; } .field { display: block; margin-bottom: 16px; } .field > span { display: block; font-weight: 600; margin-bottom: 4px; }
+.field small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+.field.checkbox { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } .field.checkbox > span { margin: 0; font-weight: 500; }
+.field.checkbox small { flex-basis: 100%; }
+input:not([type=checkbox]), select, textarea { width: 100%; font: inherit; padding: 8px 10px; border-radius: 8px;
+       border: 1px solid var(--line); background: var(--card); color: var(--text); }
+textarea { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+input[readonly] { color: var(--muted); }
+.result { padding: 10px 14px; border-radius: 8px; margin: 8px 0; } .result.ok { background: var(--ok-bg); color: var(--ok); }
+.result.bad { background: var(--bad-bg); color: var(--bad); } .warn { color: var(--run); } .result .small { color: var(--text); opacity: .85; }
+.back { display: inline-block; margin-bottom: 12px; font-size: 14px; }
+.ask-form { display: flex; gap: 8px; margin: 18px 0 8px; } .ask-form input { flex: 1; }
+.answer-text { font-size: 16px; } .sources { padding-left: 18px; } pre { background: var(--bg); padding: 10px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
+details { margin-top: 8px; } [hidden] { display: none !important; }
+.icon { display: inline-block; width: 1.6em; }
