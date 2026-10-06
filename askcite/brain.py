@@ -66,10 +66,13 @@ def _time_windows(tz: str, now: datetime | None = None) -> str:
 def system_prompt(workspace: Workspace, asker: Asker, model_sees_data: bool) -> str:
     settings = workspace.settings
     tz = settings.sources.timezone
+    # Name only the document sources that exist, so answers don't claim e.g. "Notion" for a docs folder
+    doc_kinds = (["Notion pages"] if settings.sources.notion is not None else []) + (
+        ["docs folders"] if settings.sources.docs_folders else [])
     parts = [
         "You answer questions from non-technical colleagues (operations, support, product, finance) about our "
-        "product. The answer may be in the documents (Notion pages and docs folders), in the source code, "
-        "or in the live database.",
+        f"product. The answer may be in the documents ({' and '.join(doc_kinds) or 'none connected'}), in the "
+        "source code, or in the live database.",
         "Rules:",
         "1. Use the tools to find evidence. Never guess or invent. If you cannot find it, call final_answer "
         "with found=false and say briefly what you looked at.",

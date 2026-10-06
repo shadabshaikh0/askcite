@@ -160,3 +160,12 @@ def test_answer_text_is_cleaned_of_labels_and_ids():
     assert clean_answer("Final answer: Retry twice [C4].\n\nSources: C4, Q2") == "Retry twice."
     assert clean_answer("**Final answer:** {{Q1}} orders (Q1).") == "{{Q1}} orders."
     assert clean_answer("Orders (CREATED) move to PAID.") == "Orders (CREATED) move to PAID."
+
+
+def test_prompt_names_only_the_connected_document_sources(settings, catalog):
+    from askcite.brain import system_prompt
+    from askcite.config import DocsFolderSource
+
+    settings.sources.docs_folders = [DocsFolderSource(name="docs", path="docs")]
+    prompt = system_prompt(workspace(settings, catalog), Asker("U1", ["everyone"]), model_sees_data=False)
+    assert "documents (docs folders)" in prompt and "Notion" not in prompt

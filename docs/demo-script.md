@@ -26,4 +26,5 @@ Optional: connect a test Slack workspace (see [slack-app.md](slack-app.md)) to s
 - Use a cloud model for the recording (e.g. `cloud_model: anthropic/claude-sonnet-5` in
   `examples/demo-shop/config/sources.yaml`). Answers come back in a few seconds, versus about 40 s locally.
 - Record at 1280×800. Use [Kap](https://getkap.co) or QuickTime on macOS, and export the GIF at 12 fps.
-- Save images as `docs/images/connectors.png`, `docs/images/answer.png` and `docs/images/demo.gif`.
+- The README screenshots live in `docs/images/` (`answer-*.png`, `connectors.png`, `connector-postgres.png`,
+  `cli.png`, `public-demo.png`). Save a recording as `docs/images/demo.gif`.

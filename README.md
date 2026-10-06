@@ -21,8 +21,8 @@ Non-technical colleagues ask in Slack. Askcite finds the answer in the right pla
 
 It replies in plain English, with **links to the exact lines, document section or query** it used.
 
-<!-- Replace with a real recording: see docs/demo-script.md -->
-![Connectors page](docs/images/connectors.png)
+![An answer from the code and the runbook, with the exact files and lines it used](docs/images/answer-code.png)
+<p align="center"><sub>A real answer on the fake demo shop: the code and the runbook it used, and the steps it took.</sub></p>
 
 ## Why
 
@@ -44,6 +44,49 @@ shows its sources, so people can trust the answer, or check it.
 - **📎 Citations everywhere**: commit-exact code links, document anchors, and a "Show query" button.
 - **🧠 Any model**: free local models (Ollama) or Claude, OpenAI or Gemini, via LiteLLM.
 - **✅ Measurable**: a test-question runner with 20 demo questions ([benchmarks](docs/benchmarks.md)).
+
+## A quick tour
+
+All screenshots are from the [fake demo shop](examples/demo-shop) running locally. Every name and number is
+made up.
+
+### Numbers from the live database, safely
+
+Askcite finds the right table, looks at how the code already queries it, and writes **one read-only `SELECT`**.
+The SQL and every step are shown under the answer. The AI model never sees the numbers: it writes the answer
+with blanks, and Askcite fills them in.
+
+![A data answer: orders per status, with the SQL that was run and the steps taken](docs/images/answer-data.png)
+
+### Personal data is refused
+
+Names, phone numbers, emails, PAN and similar columns can't be queried, not even in a `WHERE` clause. Askcite
+says no instead of guessing.
+
+![A question asking for a customer's phone number is refused](docs/images/answer-refused.png)
+
+### Connectors
+
+Connect Slack, Notion, any git repository, PostgreSQL and docs folders from one page. **Test** checks the
+connection before saving, and for databases it also verifies that the user is read-only. Secrets are stored
+encrypted, and each card shows when it last synced.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/connectors.png" alt="Connectors page with a code repo, docs folder and read-only database"></td>
+    <td width="50%"><img src="docs/images/connector-postgres.png" alt="PostgreSQL connector form with a successful read-only connection test"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Everything connected, with sync status</sub></td>
+    <td align="center"><sub>PostgreSQL: limits, approvals, personal columns, and a passed test</sub></td>
+  </tr>
+</table>
+
+### From the terminal
+
+The same features work from the CLI: manage connectors, check whether a query would be allowed, and ask.
+
+![Terminal: askcite connectors, a blocked personal-data query, and an answer with sources](docs/images/cli.png)
 
 ## Try it in 5 minutes (free, with a fake demo shop)
 
@@ -73,6 +116,8 @@ Then go to **Try a question**:
 limits per visitor and per day, and suggested questions are answered instantly from a cache. Admin pages stay
 behind a password. It fits in an Oracle Cloud *Always Free* VM with Gemini's free tier, so it costs $0. See
 **[docs/hosting-oracle.md](docs/hosting-oracle.md)**.
+
+![Public demo mode: a banner, suggested questions and an instant cached answer](docs/images/public-demo.png)
 
 ## How it works
 

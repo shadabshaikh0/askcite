@@ -297,7 +297,7 @@ def _tool(name: str, description: str, properties: dict, required: list[str]) ->
 
 
 DOC_TOOLS = [
-    _tool("search_docs", "Search the documents (PRDs, TRDs, runbooks — from Notion or docs folders) for a topic.",
+    _tool("search_docs", "Search the documents (PRDs, TRDs, runbooks) for a topic.",
           {"query": {"type": "string", "description": "a few keywords"}}, ["query"]),
 ]
 CODE_TOOLS = [
