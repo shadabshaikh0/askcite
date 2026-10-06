@@ -75,6 +75,7 @@ class FakeRows:
         self.now = datetime.now(UTC).replace(microsecond=0)
         self.days = days
         self.keys: dict[tuple[str, str], list] = {}  # (table, column) -> values, for foreign keys
+        self.one_each: dict[tuple[str, str], list] = {}  # shuffled parent keys for one-row-per-parent tables
 
     def value(self, table: Table, column_name: str, column_type: str, allowed: list[str] | None, row: int):
         fk = next((f for f in table.foreign_keys if column_name in f.columns), None)
@@ -82,6 +83,13 @@ class FakeRows:
             ref_column = fk.ref_columns[fk.columns.index(column_name)] if len(fk.ref_columns) > fk.columns.index(
                 column_name) else column_name
             parents = self.keys.get((fk.ref_table.lower(), ref_column.lower()))
+            if parents and table.primary_key == [column_name]:  # one row per parent, e.g. a status per user
+                key = (table.name, column_name)
+                if key not in self.one_each:
+                    self.one_each[key] = self.random.sample(parents, len(parents))
+                order = self.one_each[key]
+                if row < len(order):
+                    return order[row]
             if parents:
                 return self.random.choice(parents)
         if allowed:

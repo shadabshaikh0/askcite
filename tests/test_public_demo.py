@@ -7,7 +7,7 @@ from askcite.brain import Answer
 from askcite.config import DemoSettings
 from askcite.runtime import Runtime
 from askcite.tools import Source
-from askcite.web.app import create_app, warm_cache
+from askcite.web.app import create_app, keep_warm, warm_cache
 from askcite.web.auth import csrf_token
 from askcite.web.limits import QuestionLimiter
 
@@ -115,3 +115,16 @@ def test_warm_cache_answers_suggested_questions_once(runtime):
     assert warm_cache(runtime, ["Q1?", "Q2?"], pause_seconds=7, sleep=pauses.append) == 2
     assert warm_cache(runtime, ["Q1?", "Q2?"], pause_seconds=7, sleep=pauses.append) == 0
     assert runtime._brain.questions == ["Q1?", "Q2?"] and pauses == [7, 7]
+
+
+def test_keep_warm_tries_again_every_hour(runtime):
+    pauses = []
+
+    def sleep(seconds):
+        pauses.append(seconds)
+        if seconds == 3600 and pauses.count(3600) == 2:
+            raise SystemExit  # stop the endless loop after two rounds
+
+    with pytest.raises(SystemExit):
+        keep_warm(runtime, ["Q1?"], sleep=sleep)
+    assert runtime._brain.questions == ["Q1?"] and pauses.count(3600) == 2  # cached after the first round

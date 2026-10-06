@@ -40,6 +40,8 @@ def demo_is_ready(store_url: str) -> bool:
     """True when all three demo connectors exist and their last sync succeeded."""
     try:
         with psycopg.connect(store_url, connect_timeout=5) as conn:
+            if conn.execute("select to_regclass('connector') is null").fetchone()[0]:
+                return False  # a fresh database: nothing set up yet
             names = {row[0] for row in conn.execute("select name from connector where name = any(%s)",
                                                      (list(CONNECTORS),))}
             failed = conn.execute("select count(*) from (select distinct on (source) status from sync_run "

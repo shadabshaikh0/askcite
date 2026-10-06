@@ -114,6 +114,7 @@ class AiPolicy(BaseModel):
 
 class AiSettings(BaseModel):
     cloud_model: str = "anthropic/claude-sonnet-5"
+    fallback_models: list[str] = Field(default_factory=list)  # used when cloud_model is overloaded
     local_model: str | None = None  # e.g. "ollama/qwen2.5:14b"
     local_api_base: str | None = None  # e.g. "http://ollama:11434"
     policy: AiPolicy = Field(default_factory=AiPolicy)
@@ -220,6 +221,8 @@ def get_settings() -> Settings:
     sources = SourcesConfig.model_validate(_read_yaml(config_dir / "sources.yaml"))
     if os.environ.get("ASKCITE_MODEL"):  # e.g. a hosted demo switching to gemini/gemini-flash-latest
         sources.ai.cloud_model = os.environ["ASKCITE_MODEL"]
+    if os.environ.get("ASKCITE_FALLBACK_MODELS"):  # comma-separated, e.g. gemini/gemini-flash-lite-latest
+        sources.ai.fallback_models = [m.strip() for m in os.environ["ASKCITE_FALLBACK_MODELS"].split(",") if m.strip()]
     return Settings(
         config_dir=config_dir,
         data_dir=Path(os.environ.get("ASKCITE_DATA_DIR", "data")).expanduser().resolve(),

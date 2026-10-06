@@ -427,9 +427,9 @@ def run(host: str = typer.Option("127.0.0.1", help="web page address (keep 127.0
     runtime.slack.ensure(runtime.sources.slack)
     threading.Thread(target=runtime.refresh_loop, args=(refresh_minutes,), daemon=True).start()
     if public_demo and runtime.settings.sources.demo.suggested_questions:
-        from askcite.web.app import warm_cache
+        from askcite.web.app import keep_warm
 
-        threading.Thread(target=warm_cache, args=(runtime, runtime.settings.sources.demo.suggested_questions),
+        threading.Thread(target=keep_warm, args=(runtime, runtime.settings.sources.demo.suggested_questions),
                          daemon=True).start()
     url = f"http://{host}:{port}/{'ask' if public_demo else 'connectors'}"
     log.info("Askcite is running%s — open %s", " (public demo mode)" if public_demo else "", url)

@@ -31,6 +31,7 @@ services:
       ASKCITE_CONFIG_DIR: /app/examples/demo-shop/config
       ASKCITE_DATA_DIR: /data
       ASKCITE_MODEL: ${ASKCITE_MODEL:-gemini/gemini-flash-latest}
+      ASKCITE_FALLBACK_MODELS: ${ASKCITE_FALLBACK_MODELS:-gemini/gemini-flash-lite-latest}
       GEMINI_API_KEY: ${GEMINI_API_KEY:?set GEMINI_API_KEY in .env}
       ASKCITE_ADMIN_PASSWORD: ${ASKCITE_ADMIN_PASSWORD:?set ASKCITE_ADMIN_PASSWORD in .env}
     volumes: [appdata:/data]

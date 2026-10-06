@@ -100,6 +100,7 @@ Containers restart by themselves after a server reboot.
 |---|---|
 | Answers say *"something went wrong"* | Run `docker compose logs app \| grep failed`. `API key not valid` means: fix `GEMINI_API_KEY` in `.env`, then run `docker compose up -d`. |
 | Answers are slow or *"busy"* | The free Gemini tier allows about 10 requests a minute. Askcite retries, so wait a minute. |
+| Log says *"… is busy (ServiceUnavailableError); using the next model"* | Google's model is overloaded. Askcite switched to `ASKCITE_FALLBACK_MODELS` on its own; nothing to do. |
 | The HTTPS page doesn't load | Check that ports 80/443 are open in **both** places (step 3), and that `DEMO_HOST` contains the server's current public IP. |
 | The app can't connect to its database after you changed `POSTGRES_PASSWORD` | Postgres keeps the password it was first started with. Run `docker compose down -v && docker compose up -d` (this rebuilds the demo data). |
 
@@ -115,5 +116,6 @@ Then open **http://localhost**.
 In `examples/demo-shop/config/sources.yaml`, under `demo:`, you can set the suggested questions, the banner,
 the per-visitor and daily limits, and how long answers are cached.
 
-If the free Gemini quota feels tight, try `ASKCITE_MODEL=gemini/gemini-flash-lite-latest`, which has higher free
-limits, or set a paid model such as `anthropic/claude-sonnet-5-5` together with its API key.
+When the main model is overloaded, Askcite switches to `ASKCITE_FALLBACK_MODELS`
+(default `gemini/gemini-flash-lite-latest`) for two minutes. If the free Gemini quota feels tight, try
+`ASKCITE_MODEL=gemini/gemini-flash-lite-latest`, which has higher free limits, or set a paid model such as `anthropic/claude-sonnet-5-5` together with its API key.

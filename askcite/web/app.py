@@ -340,3 +340,19 @@ def warm_cache(runtime, questions: list[str], pause_seconds: int = 30, sleep=Non
         warmed += answer.status == "answered"
         sleep(pause_seconds)  # stay well under free-tier request limits
     return warmed
+
+
+def keep_warm(runtime, questions: list[str], every_minutes: int = 60, sleep=None) -> None:
+    """Warm the suggested questions now and then every hour: answers that failed (e.g. the AI was busy) or
+    whose cache expired are answered again in the background."""
+    import logging
+    import time
+
+    sleep = sleep or time.sleep
+    while True:
+        try:
+            warm_cache(runtime, questions, sleep=sleep)
+        except Exception:  # noqa: BLE001 - keep the loop alive; the next round tries again
+            logging.getLogger(__name__).exception("warming suggested questions failed")
+        sleep(every_minutes * 60)
+
